@@ -1,4 +1,5 @@
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Queue;
 
 public class DVDfactory {
@@ -10,7 +11,9 @@ public class DVDfactory {
 	public static int amountM2 = 2;
 	public static int amountM3 = 2;
 	public static int amountM4 = 2;
-	public static int[][] eventList = new int[9][2]; // eventtime starttime
+	
+	
+	public static ArrayList<Event> eventList = new ArrayList(); // eventtime starttime
 	
 	// states for all machines 1
 	public static boolean[] m1Repairing = new boolean[amountM1];
@@ -49,6 +52,13 @@ public class DVDfactory {
 	public static int[] cartridge = new int[amountM4]; 
 	public static int[] countDVDsC = new int[amountM4];
 	
+	public static void init(){
+		for ( int i = 0; i < amountM1; i++){
+			m1Repairing[i] = false;
+			m1Idle[i] = false;
+			m1RestTime[i] = 0;
+		}
+	}
 	
 	
 	private static void m1ScheduledFinished(int machine, int eventTime){
@@ -57,8 +67,8 @@ public class DVDfactory {
 		currentTime = eventTime;
 		if(!m1Repairing[machine]) {
 			if(dvdsInBuffer[indexBuffer]<20){
-				eventList[0][0] = eventTimeM1();
-				eventList[0][1] = currentTime;
+				//eventList[0][0] = eventTimeM1();
+				//eventList[0][1] = currentTime;
 			}
 		}
 		
