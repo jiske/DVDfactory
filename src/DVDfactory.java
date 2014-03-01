@@ -1,5 +1,4 @@
 import java.util.LinkedList;
-import java.util.ArrayList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.PriorityQueue;
@@ -8,7 +7,7 @@ import java.util.PriorityQueue;
 public class DVDfactory {
 	
 	
-	/////------------------------------------ Declarations and Init() --------------------------\\\\\\\\\
+/////------------------------------------ Declarations and Init() --------------------------\\\\\\\\\
 
 	public static int currentTime;
 	public static int bufferSize = 20;
@@ -22,8 +21,7 @@ public class DVDfactory {
 	// This should be a priorityqueue, with DVD.eventTime as keys. We will always need the first event.
 	// Sometimes events are set to be infinite, but we still need their data i.e. if the machine is idle.
 	// In this case we need to save the DVD data in another array. 
-	public static PriorityQueue<Event> eventlist = new PriorityQueue<Event>();
-	public static ArrayList<DVD> eventList = new ArrayList<DVD>(); // eventtime starttime
+	public static PriorityQueue<Event> eventList = new PriorityQueue<Event>();
 	
 	// states for all machines 1
 	public static boolean[] m1Repairing = new boolean[amountM1];
@@ -81,6 +79,9 @@ public class DVDfactory {
 			DVD dvd = new DVD(0,1,i);
 			Event m1FinishedEvent = new Event(eventTimeM1(),1,dvd);
 			Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,null);
+			
+			eventList.add(m1FinishedEvent);
+			//eventList.add(m1StartRepairEvent);
 		}
 		
 		// ProductionStep 2 is running, and all buffers are empty
@@ -117,7 +118,7 @@ public class DVDfactory {
 	
 	
 	
-	/////------------------------------------ Event Handlers--------------------------------------\\\\\\\\\
+/////------------------------------------ Event Handlers--------------------------------------\\\\\\\\\
 
 
 	private static void m1ScheduledFinished(int machine, int eventTime){
@@ -133,7 +134,7 @@ public class DVDfactory {
 		
 	}
 	
-	/////------------------------------------ Event time calculations --------------------------\\\\\\\\\
+/////------------------------------------ Event time calculations --------------------------\\\\\\\\\
 	
 	private static int eventTimeStartRepairM1() {
 		// TODO Auto-generated method stub
