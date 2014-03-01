@@ -1,17 +1,15 @@
 
 public class Event {
-
-	public int startTime = 0;
-	public int eventTime = 0;
-	public int productionStep = 0;
-	public int machineNum = 0;
+	int eventTime = 0;
+	int eventStep = 0;
+	DVD dvd = null;
 	
-    //constructor
-    public Event(int a, int b, int c, int d) {
-    	startTime = a;
-    	eventTime = b;
-    	productionStep = c;
-    	machineNum = d;
-    	
-    }
+	//constructor
+	public Event(int a, int b, DVD c) {
+		 eventTime = a;
+		 eventStep = b;
+		 dvd = c;
+	}
+	
+
 }
