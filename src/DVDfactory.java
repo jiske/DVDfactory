@@ -6,6 +6,14 @@ import java.util.PriorityQueue;
 
 public class DVDfactory {
 	
+
+/////------------------------------------ Testing	---------------------------------------\\\\\\\\\\	
+	// deze dingen heb ik aangemaakt om te testen
+	public static int dvdsStarted = 0;
+	public static int totalRepairTime = 0;
+	public static int repairNumber = 0;
+	public static int dvdsM2 = 0;
+	public static int brokenDVDs = 0;
 	
 /////------------------------------------ Declarations and init() --------------------------\\\\\\\\\
 
@@ -30,7 +38,7 @@ public class DVDfactory {
 	public static DVD[] m1DVDWaiting = new DVD[amountM1];
 	public static int[] m1StartRepairTime = new int[amountM1];
 	
-	// states for all buffers 
+	// states for all buffers  //!!!!!!! buffers werken niet.
 	public static LinkedList<Queue<DVD>> bufferList = new LinkedList<Queue<DVD>>();
 	public static Queue<DVD> buffer = new LinkedList<DVD>();
 
@@ -39,6 +47,7 @@ public class DVDfactory {
 	// state for all machines 2
 	public static boolean[] m2Idle = new boolean[amountM2];
 	public static DVD[] m2DVDWaiting = new DVD[amountM2];
+	public static boolean[] m2Busy = new boolean[amountM2]; //!!!!! nieuw
 
 	
 	// state for conveyor belt 
@@ -88,6 +97,7 @@ public class DVDfactory {
 			
 			eventList.add(m1FinishedEvent);
 			eventList.add(m1StartRepairEvent);
+			dvdsStarted++; // testing
 		}
 		
 		// ProductionStep 2 is running, and all buffers are empty
@@ -137,11 +147,13 @@ public class DVDfactory {
 				DVD new_dvd = new DVD(currentTime,e.dvd.productionStep, e.dvd.machineNum);
 				Event m1Finished = new Event(eventTimeM1(),1,e.machineNum,new_dvd);
 				eventList.add(m1Finished);
+				dvdsStarted++; 
 				
-				if (bufferList.get(indexBuffer).isEmpty() && !m2Idle[indexBuffer]) {
+				if (bufferList.get(indexBuffer).isEmpty() && !m2Idle[indexBuffer] && !m2Busy[indexBuffer]) {
 					
 					Event m2Finished = new Event(eventTimeM2(),4,indexBuffer,e.dvd);	
 					eventList.add(m2Finished);
+					m2Busy[indexBuffer] = true; // !!!!!!!!!!!!!!! volgens mij is dit nodig om te checken of er niet nog een DVD in die machine zit 
 				} else {
 					bufferList.get(indexBuffer).add(e.dvd);
 				}	
@@ -176,11 +188,40 @@ public class DVDfactory {
 			eventList.add(m1Finished);
 		}
 		m1Repairing[e.machineNum] = false;
+		totalRepairTime = m1StartRepairTime[e.machineNum] + totalRepairTime;  // testing
+		repairNumber++; // testing
 		Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,e.machineNum,null);
 		eventList.add(m1StartRepairEvent);
 	}
 	
-	private static void m2ScheduledFinished(Event e) {
+	private static void m2ScheduledFinished(Event e) { // !!!!!!! deze heb ik dus geschreven
+		m2Busy[e.machineNum] = false;
+		currentTime = e.eventTime;
+		if (false) { // DVDs to conveyor belt
+			Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
+			eventList.add(cbScheduledFinished);
+		} else if (true) { // DVD breaks
+			// delete DVD
+			brokenDVDs++;
+		} else {
+			m2Idle[e.machineNum] = true;
+		}
+		if(!bufferList.get(e.machineNum).isEmpty() && !m2Idle[e.machineNum]){
+			if (bufferList.get(e.machineNum).size() == 20){
+				for(int i = 0; i<amountM1; i++){
+					int check = i/(amountM1/amountM2); // dit is weer dat lijpe omrekenen omdat we moeten kijken welke machines 2 bij machines 1 horen.
+					System.out.println("check is: " + check);
+					if (!m1Repairing[i] && m1Idle[i] && (e.machineNum == check)){
+						Event m1Finished = new Event(currentTime,1,i,m1DVDWaiting[i]);
+						eventList.add(m1Finished);
+						m1Idle[i] = false;
+						break;
+					}
+				}
+			}
+			Event m2Finished = new Event(eventTimeM2(),4,e.machineNum,e.dvd);
+			eventList.add(m2Finished);
+		}
 		
 	}
 	
@@ -240,26 +281,26 @@ public class DVDfactory {
 
 	private static int eventTimeM1(){
 		// calculates next m1ScheduledFinished
-		return 60;
+		return currentTime + 25;
 	}
 	
 	private static int eventTimeStartRepairM1() {
 		// TODO Auto-generated method stub
-		return 8*60*60;
+		return currentTime + 8*60*60;
 	}
 	
 	private static int eventTimeM1FinishedRepair() {
 		// TODO Auto-generated method stub
-		return 2*60*60;
+		return currentTime + 2*60*60;
 	}
 	
 	private static int eventTimeM2() {
 		// TODO Auto-generated method stub
-		return 24;
+		return currentTime + 100;
 	}
 	
 	private static int eventTimeM4() {
-		return 24;
+		return currentTime + 24;
 	}
 	
 	private static int getCartridgeSize(){
@@ -284,6 +325,7 @@ public class DVDfactory {
 	
 	
 	public static void main(String[] args){
+		int a = 0;
 		init();
 		System.out.println("Compiles, at least.");
 		
@@ -312,13 +354,22 @@ public class DVDfactory {
 					break;
 			default: System.out.println("What's happening?!?!");
 			}
-			
-			/*
-			1 = m1Finished
-			2 = startRepairM1
-			3 = finishRepairM1
-			...
-			*/
+			a++;
+			if (a%10 ==0){
+				System.out.println("Total number of DVDs started machine 1: " + dvdsStarted);
+				for(int i = 0; i<amountM2; i++) {
+					System.out.println("DVDs in buffer " + (i+1) + ": " + bufferList.get(i).size());
+				}
+				System.out.println("Total number of DVDs started machine 2: " + brokenDVDs);	
+				for(int i = 0; i<amountM1; i++) { // volgens mij klopt het niet hoe het gaat met repairen en idle zijn. Ik denk dat we dat niet goed weer veranderen ofzo. 
+					if (m1Idle[i]){
+						System.out.println("M1." + (i+1) + " is idle");
+					}
+					if (m1Repairing[i]){
+						System.out.println("M1." + (i+1) + " is reparing");
+					} 
+				}
+			}
 		}
 	}
 
