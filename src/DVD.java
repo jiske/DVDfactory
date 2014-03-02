@@ -15,7 +15,6 @@ public class DVD {
     	startTime = a;
     	productionStep = b;
     	machineNum = c;
-    	
     }
 }
 

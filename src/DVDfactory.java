@@ -7,7 +7,7 @@ import java.util.PriorityQueue;
 public class DVDfactory {
 	
 	
-/////------------------------------------ Declarations and Init() --------------------------\\\\\\\\\
+/////------------------------------------ Declarations and init() --------------------------\\\\\\\\\
 
 	public static int currentTime;
 	public static int bufferSize = 20;
@@ -27,13 +27,19 @@ public class DVDfactory {
 	public static boolean[] m1Repairing = new boolean[amountM1];
 	public static boolean[] m1Idle = new boolean[amountM1];
 	public static int[] m1RestTime = new int[amountM1];
+	public static DVD[] m1DVDWaiting = new DVD[amountM1];
+	public static int[] m1StartRepairTime = new int[amountM1];
 	
 	// states for all buffers 
-	public static int[][] buffer = new int[amountM2][bufferSize]; 
-	public static int[] dvdsInBuffer = new int[amountM2];
+	public static LinkedList<Queue<DVD>> bufferList = new LinkedList<Queue<DVD>>();
+	public static Queue<DVD> buffer = new LinkedList<DVD>();
+
+	//public static int[] dvdsInBuffer = new int[amountM2];
 
 	// state for all machines 2
 	public static boolean[] m2Idle = new boolean[amountM2];
+	public static DVD[] m2DVDWaiting = new DVD[amountM2];
+
 	
 	// state for conveyor belt 
 	public static boolean[] cbIdle = new boolean[amountM2];
@@ -77,21 +83,19 @@ public class DVDfactory {
 			m1RestTime[i] = 0;
 			
 			DVD dvd = new DVD(0,1,i);
-			Event m1FinishedEvent = new Event(eventTimeM1(),1,dvd);
-			Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,null);
+			Event m1FinishedEvent = new Event(eventTimeM1(),1,i,dvd);
+			Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,i,null);
 			
-			//eventList.add(m1FinishedEvent);
-			//eventList.add(m1StartRepairEvent);
+			eventList.add(m1FinishedEvent);
+			eventList.add(m1StartRepairEvent);
 		}
 		
 		// ProductionStep 2 is running, and all buffers are empty
 		for ( int i = 0; i < amountM2; i++){
 			cbIdle[i] = false;
 			m2Idle[i] = false;
-			dvdsInBuffer[i] = 0;
-			for(int j = 0; j < bufferSize; j++) {
-				buffer[i][j] = 0;
-			}
+			Queue<DVD> buffer = new LinkedList<DVD>();
+			bufferList.add(buffer);
 		}
 		
 		// All crates are empty
@@ -112,7 +116,8 @@ public class DVDfactory {
 			cartridge[i] = getCartridgeSize();
 			countDVDsC[i] = 0;
 		}
-		
+		Event endSimulationEvent = new Event((24*60*60),10,0,null);
+		eventList.add(endSimulationEvent);
 		
 	}
 	
@@ -122,29 +127,139 @@ public class DVDfactory {
 
 
 	private static void m1ScheduledFinished(Event e){
-		int indexBuffer = e.dvd.machineNum/(amountM1/amountM2); // calculates which buffer belongs to which machine
-		
+		// calculates which buffer belongs to which machine
+		int indexBuffer = e.dvd.machineNum/(amountM1/amountM2); 
+	
 		currentTime = e.eventTime;
 		if(!m1Repairing[e.dvd.machineNum]) {
-			if(dvdsInBuffer[indexBuffer]<20){
-				DVD dvd = new DVD(currentTime,e.dvd.productionStep, e.dvd.machineNum);
-				Event m1Finished = new Event(eventTimeM1(),1,dvd);
-			
+			if(bufferList.get(indexBuffer).size() <20) {
+				
+				DVD new_dvd = new DVD(currentTime,e.dvd.productionStep, e.dvd.machineNum);
+				Event m1Finished = new Event(eventTimeM1(),1,e.machineNum,new_dvd);
+				eventList.add(m1Finished);
+				
+				if (bufferList.get(indexBuffer).isEmpty() && !m2Idle[indexBuffer]) {
+					
+					Event m2Finished = new Event(eventTimeM2(),4,indexBuffer,e.dvd);	
+					eventList.add(m2Finished);
+				} else {
+					bufferList.get(indexBuffer).add(e.dvd);
+				}	
+			} else {
+				m1Idle[e.dvd.machineNum] = true;
+				m1DVDWaiting[e.dvd.machineNum] = e.dvd;
 			}
+		} else {
+			m1RestTime[e.dvd.machineNum] = currentTime - m1StartRepairTime[e.dvd.machineNum];
+			m1DVDWaiting[e.dvd.machineNum] = e.dvd;
+			
 		}
+		// Machines go from 4 to 2, so we need to change machineNum accordingly
+		e.dvd.machineNum = indexBuffer;
+	}
+	
+	private static void m1StartRepairing(Event e){
+		currentTime = e.eventTime;
+		m1Repairing[e.machineNum] = true;
+		m1StartRepairTime[e.machineNum] = currentTime;
+		Event m1FinishedRepairing = new Event(eventTimeM1FinishedRepair(),3,e.machineNum,null);
+		eventList.add(m1FinishedRepairing);
+	}
+
+	private static void m1FinishedRepairing(Event e){
+		currentTime = e.eventTime;
+		if(!m1Idle[e.machineNum]) {
+			int time = (currentTime+m1RestTime[e.machineNum]);
+			Event m1Finished = new Event(time,1,e.machineNum,m1DVDWaiting[e.machineNum]);
+			m1DVDWaiting[e.machineNum] = null; // remove DVD from waiting list. !!!!!!!!!!!!!!!Opletten!!!!!!!!!!!!!!!!!!!!
+			m1RestTime[e.machineNum] = 0;
+			eventList.add(m1Finished);
+		}
+		m1Repairing[e.machineNum] = false;
+		Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,e.machineNum,null);
+		eventList.add(m1StartRepairEvent);
+	}
+	
+	private static void m2ScheduledFinished(Event e) {
 		
 	}
 	
+
+	private static void m4ScheduledFinished(Event e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+	private static void m3_3ScheduledFinished(Event e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+	private static void m3_12ScheduledFinished(Event e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+	private static void cratesScheduledSwap(Event e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+	private static void cbScheduledFinished(Event e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	
+	/*
+	if not M1_repairing
+	if buffer.size < 20
+	schedule new event M1_scheduled_finished for next DVD for this machine
+	if (buffer.size == 0 and not M2_idle) {
+	schedule new event M2_scheduled_finished for this DVD}
+	else  buffer.push_back(this DVD) 
+	else
+	set M1_idle = true
+	schedule new event M1_scheduled_finished infinite 
+	else
+	M1_rest_time = current_time - M1_time_start_repairing 
+	schedule event M1_scheduled_finished infinite
+	*/
+	
+
 /////------------------------------------ Event time calculations --------------------------\\\\\\\\\
 	
-	private static int eventTimeStartRepairM1() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-	
+
 	private static int eventTimeM1(){
 		// calculates next m1ScheduledFinished
 		return 60;
+	}
+	
+	private static int eventTimeStartRepairM1() {
+		// TODO Auto-generated method stub
+		return 8*60*60;
+	}
+	
+	private static int eventTimeM1FinishedRepair() {
+		// TODO Auto-generated method stub
+		return 2*60*60;
+	}
+	
+	private static int eventTimeM2() {
+		// TODO Auto-generated method stub
+		return 24;
+	}
+	
+	private static int eventTimeM4() {
+		return 24;
 	}
 	
 	private static int getCartridgeSize(){
@@ -175,6 +290,29 @@ public class DVDfactory {
 		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
 		while(eventList.peek().eventStep != 10 ) {
 			// TODO: Make a switch here that calls the method that's needed according to the e.eventStep int.
+			Event e = eventList.remove();
+			switch(e.eventStep) {
+			case 1: m1ScheduledFinished(e); 
+					break;
+			case 2: m1StartRepairing(e);
+					break;
+			case 3: m1FinishedRepairing(e);
+					break;
+			case 4: m2ScheduledFinished(e);
+					break;
+			case 5: cbScheduledFinished(e);
+					break;
+			case 6: cratesScheduledSwap(e);
+					break;
+			case 7: m3_12ScheduledFinished(e);
+					break;
+			case 8: m3_3ScheduledFinished(e);
+					break;
+			case 9: m4ScheduledFinished(e); 
+					break;
+			default: System.out.println("What's happening?!?!");
+			}
+			
 			/*
 			1 = m1Finished
 			2 = startRepairM1
@@ -183,5 +321,7 @@ public class DVDfactory {
 			*/
 		}
 	}
+
+
 
 }

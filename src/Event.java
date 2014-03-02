@@ -1,16 +1,18 @@
-import java.util.Comparator;
+import java.lang.Comparable;
 
 
-public class Event implements Comparator<Event> {
+public class Event implements Comparable<Event> {
 	int eventTime = 0;
 	int eventStep = 0;
+	int machineNum = 0;
 	DVD dvd = null;
 	
 	//constructor
-	public Event(int a, int b, DVD c) {
+	public Event(int a, int b, int c, DVD d) {
 		 eventTime = a;
 		 eventStep = b;
-		 dvd = c;
+		 machineNum = c;
+		 dvd = d;
 	}
 	
 	public int compareTo(Event e){
