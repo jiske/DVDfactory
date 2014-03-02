@@ -197,11 +197,19 @@ public class DVDfactory {
 	private static void m2ScheduledFinished(Event e) { // !!!!!!! deze heb ik dus geschreven
 		m2Busy[e.machineNum] = false;
 		currentTime = e.eventTime;
-		if (false) { // DVDs to conveyor belt
+		
+		// Again, we still need to check this PRNG.
+		double dvdBrokenRand;
+		Random rand = new Random();
+		dvdBrokenRand = rand.nextDouble();
+		
+		
+		if (dvdBrokenRand > .03 && !cbIdle[e.machineNum]) { // DVDs to conveyor belt
 			Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
 			eventList.add(cbScheduledFinished);
-		} else if (true) { // DVD breaks
+		} else if (dvdBrokenRand <= .03) { // DVD breaks
 			// delete DVD
+			e.dvd = null;
 			brokenDVDs++;
 		} else {
 			m2Idle[e.machineNum] = true;
@@ -259,22 +267,6 @@ public class DVDfactory {
 		
 	}
 
-	
-	/*
-	if not M1_repairing
-	if buffer.size < 20
-	schedule new event M1_scheduled_finished for next DVD for this machine
-	if (buffer.size == 0 and not M2_idle) {
-	schedule new event M2_scheduled_finished for this DVD}
-	else  buffer.push_back(this DVD) 
-	else
-	set M1_idle = true
-	schedule new event M1_scheduled_finished infinite 
-	else
-	M1_rest_time = current_time - M1_time_start_repairing 
-	schedule event M1_scheduled_finished infinite
-	*/
-	
 
 /////------------------------------------ Event time calculations --------------------------\\\\\\\\\
 	
