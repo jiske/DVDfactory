@@ -80,7 +80,7 @@ public class DVDfactory {
 			Event m1FinishedEvent = new Event(eventTimeM1(),1,dvd);
 			Event m1StartRepairEvent = new Event(eventTimeStartRepairM1(),2,null);
 			
-			eventList.add(m1FinishedEvent);
+			//eventList.add(m1FinishedEvent);
 			//eventList.add(m1StartRepairEvent);
 		}
 		
@@ -121,14 +121,15 @@ public class DVDfactory {
 /////------------------------------------ Event Handlers--------------------------------------\\\\\\\\\
 
 
-	private static void m1ScheduledFinished(int machine, int eventTime){
-		int indexBuffer = machine/(amountM1/amountM2); // calculates which buffer belongs to which machine
+	private static void m1ScheduledFinished(Event e){
+		int indexBuffer = e.dvd.machineNum/(amountM1/amountM2); // calculates which buffer belongs to which machine
 		
-		currentTime = eventTime;
-		if(!m1Repairing[machine]) {
+		currentTime = e.eventTime;
+		if(!m1Repairing[e.dvd.machineNum]) {
 			if(dvdsInBuffer[indexBuffer]<20){
-				//eventList[0][0] = eventTimeM1();
-				//eventList[0][1] = currentTime;
+				DVD dvd = new DVD(currentTime,e.dvd.productionStep, e.dvd.machineNum);
+				Event m1Finished = new Event(eventTimeM1(),1,dvd);
+			
 			}
 		}
 		
@@ -170,6 +171,17 @@ public class DVDfactory {
 	public static void main(String[] args){
 		init();
 		System.out.println("Compiles, at least.");
+		
+		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
+		while(eventList.peek().eventStep != 10 ) {
+			// TODO: Make a switch here that calls the method that's needed according to the e.eventStep int.
+			/*
+			1 = m1Finished
+			2 = startRepairM1
+			3 = finishRepairM1
+			...
+			*/
+		}
 	}
 
 }
