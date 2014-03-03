@@ -7,6 +7,7 @@ public class Event implements Comparable<Event> {
 	int machineNum = 0;
 	DVD dvd = null;
 	
+	
 	//constructor
 	public Event(int a, int b, int c, DVD d) {
 		 eventTime = a;
