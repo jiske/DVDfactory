@@ -332,7 +332,6 @@ public class DVDfactory {
     }
 	
 	private static void m4ScheduledFinished(Event e) {
-		// TODO Auto-generated method stub
 		int dvdIndex=0;
 		currentTime = e.eventTime;
 		
@@ -366,12 +365,51 @@ public class DVDfactory {
 
 
 	private static void cratesScheduledSwap(Event e) {
-		// TODO Auto-generated method stub
+		currentTime = e.eventTime;
+		
+		ArrayList<DVD> tempCrateFront = new ArrayList<DVD>();
+		ArrayList<DVD> tempCrateIn = new ArrayList<DVD>();
+		
+		for(int i = 0; i < cbWaitingForSwap.length; i++ ){
+			for(int j = 0; j < m3_3WaitingForSwap.length; j++ ) {
+				for(int k = 0; k < m4Idle.length; k++) {
+					if(cbWaitingForSwap[i] && m3_3WaitingForSwap[j] && m4Idle[k]){
+						tempCrateFront = (ArrayList<DVD>) crateInList.get(j).clone();
+						tempCrateIn = (ArrayList<DVD>) crateInList.get(j).clone();
+						
+						crateBackList.set(k,tempCrateIn);
+						crateInList.set(j,tempCrateFront);
+						crateFrontList.get(i).clear();
+						
+						Event m3_12ScheduledFinished = new Event(eventTimeM3_1()+eventTimeM3_2(),7,j,null);
+						eventList.add(m3_12ScheduledFinished);
+						
+						
+						cbWaitingForSwap[i] = false;
+						m3_3WaitingForSwap[j] = false;
+						m4Idle[k] = false;
+						cbIdle[i] = false;
+						
+						while(!cbWaitingDVD.get(i).isEmpty()){
+							DVD this_DVD = cbWaitingDVD.get(i).remove();
+							Event CBfinished = new Event((currentTime + cbWaitingTime.get(i).remove()),5,i,this_DVD);
+							eventList.add(CBfinished);
+						}
+						
+						if(!m4Repairing[k]) {
+							Event m4ScheduledFinished = new Event(eventTimeM4(),9,k,null);
+							eventList.add(m4ScheduledFinished);
+						}
+					}	
+				}
+			}
+		}
 		
 	}
 	
 /////------------------------------------ Checking --------------------------------------\\\\\\\\\
-	
+
+
 	private static void hourCheck(Event e){
 		currentTime = e.eventTime;
 		hour++;
@@ -448,6 +486,16 @@ public class DVDfactory {
 		return currentTime + 24;
 	}
 	
+	private static int eventTimeM3_1() {
+		// TODO Auto-generated method stub
+		return currentTime + 20;
+	}
+	
+	private static int eventTimeM3_2() {
+		// TODO Auto-generated method stub
+		return currentTime + 20;
+	}
+	
 	private static int eventTimeM3_3() {
 		// TODO Auto-generated method stub
 		return currentTime + 180;
@@ -476,7 +524,7 @@ public class DVDfactory {
 	
 	private static int eventTimeM4Refill() {
 		// TODO Auto-generated method stub
-		return 0;
+		return currentTime + 15*60;
 	}
 	
 	/////-------------------------------------------- Main method ------------------------------------------\\\\\\\\\
@@ -489,7 +537,6 @@ public class DVDfactory {
 		
 		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
 		while(eventList.peek().eventStep != 11 ) {
-			// TODO: Make a switch here that calls the method that's needed according to the e.eventStep int.
 			Event e = eventList.remove();
 			switch(e.eventStep) {
 			case 1: m1ScheduledFinished(e); 
