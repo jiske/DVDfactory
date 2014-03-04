@@ -17,7 +17,7 @@ public class DVDfactory {
 	public static int brokenDVDs = 0;
 	public static int hour = 0;
 	public static int m2DVDsFinished = 0;
-	
+	public static int cbFinish = 0;
 	
 	
 /////------------------------------------ Declarations and init() --------------------------\\\\\\\\\
@@ -60,15 +60,12 @@ public class DVDfactory {
 	
 	// state for all crates in front of machine 3
 	public static ArrayList<ArrayList<DVD>> crateFrontList = new ArrayList<ArrayList<DVD>>();
-	public static int crateFrontCount = 0;
 	
 	// state for all crates in machine 3
 	public static ArrayList<ArrayList<DVD>> crateInList = new ArrayList<ArrayList<DVD>>();
-	public static int crateInCount = 0;
 	
 	// state for all crates in front of machine 4
 	public static ArrayList<ArrayList<DVD>> crateBackList = new ArrayList<ArrayList<DVD>>();
-	public static int crateBackCount = 0;
 	
 	// state for all machine 3	
 	public static boolean[] m3_3WaitingForSwap = new boolean[amountM3];
@@ -126,14 +123,10 @@ public class DVDfactory {
 			ArrayList<DVD> crateFront = new ArrayList<DVD>();
 			ArrayList<DVD> crateIn = new ArrayList<DVD>();
 			ArrayList<DVD> crateBack = new ArrayList<DVD>();
-			for(int j = 0; j < crateSize; j++ ) {
-				crateFront.add(j,null);
-				crateIn.add(j,null);
-				crateBack.add(j,null);
-			}
-			crateFrontList.add(i,crateFront);
-			crateInList.add(i,crateIn);
-			crateBackList.add(i,crateBack);
+			
+			crateFrontList.add(crateFront);
+			crateInList.add(crateIn);
+			crateBackList.add(crateBack);
 		}
 		
 		// ProductionStep 4 is running, and cartridgeSize is initialized
@@ -164,7 +157,6 @@ public class DVDfactory {
 		} else {
 			indexBuffer = 1;
 		}
-	
 		currentTime = e.eventTime;
 		if(!m1Repairing[e.machineNum]) { 
 			if(bufferList.get(indexBuffer).size() <20) {
@@ -218,67 +210,7 @@ public class DVDfactory {
 		eventList.add(m1StartRepairEvent);
 	}
 	
-	////!!!!!! deze code is om te testen tot aan machine 1 + buffer !!!!!!!!//////////
-	
-	////--------------------------------------------------------------------////////
-	/* 
-	private static void m2ScheduledFinished(Event e) { // !!!!!!! jiske: deze heb ik dus geschreven
-		m2Busy[e.machineNum] = false;
-		currentTime = e.eventTime;
-		
-		// Again, we still need to check this PRNG.
-		double dvdBrokenRand;
-		Random rand = new Random();
-		dvdBrokenRand = rand.nextDouble();
-		
-		
-		if (false){//dvdBrokenRand > .03 && !cbIdle[e.machineNum]) { // DVDs to conveyor belt
-			Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
-			eventList.add(cbScheduledFinished);
-		} else if (true){//dvdBrokenRand <= .03) { // DVD breaks
-			// delete DVD
-			// e.dvd = null; // jiske: volgens mij niet nodig 
-			brokenDVDs++;
-		} else {
-			m2Idle[e.machineNum] = true;
-		}
-		if(!m2Idle[e.machineNum]){
-			int option1 = 5;
-			int option2 = 5;
-			if(e.machineNum == 0){
-				option1 = 0;
-				option2 = 1;
-			} else {
-				option1 = 2;
-				option2 = 3;
-			}
-			if (m1Idle[option1]){
-				Event m1Finished = new Event(currentTime,1,option1,m1DVDWaiting[option1]);
-				eventList.add(m1Finished);
-				m1Idle[option1] = false;
-			}
-			if (m1Idle[option2]){
-				Event m1Finished = new Event(currentTime,1,option2,m1DVDWaiting[option2]);
-				eventList.add(m1Finished);
-				m1Idle[option2] = false;
-			}
-			if(!bufferList.get(e.machineNum).isEmpty()){
-				DVD new_dvd = bufferList.get(e.machineNum).remove(); 
-				Event m2Finished = new Event(eventTimeM2(),4,e.machineNum,new_dvd);
-				eventList.add(m2Finished);
-				m2Busy[e.machineNum] = true;
-			}
-		}
-		
-	}
-	
-*/
-		////--------------------------------------------------------------------////////
-		////!!!!!! deze code is om te testen tot aan machine 1 + buffer !!!!!!!!//////////
-	
-	
 	private static void m2ScheduledFinished(Event e) { // !!!!!!! Jiske: deze heb ik dus geschreven
-		m2Busy[e.machineNum] = false;
 		currentTime = e.eventTime;
 		
 		// Again, we still need to check this PRNG.
@@ -286,19 +218,18 @@ public class DVDfactory {
 		Random rand = new Random();
 		dvdBrokenRand = rand.nextDouble();
 		
-		if (!cbIdle[e.machineNum]){//dvdBrokenRand > .02 && !cbIdle[e.machineNum]) { // DVDs to conveyor belt
-			Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
-			eventList.add(cbScheduledFinished);
-			m2DVDsFinished++;
-		} else if (false){//dvdBrokenRand <= .02) { // DVD breaks
-			// delete DVD
-			// e.dvd = null; // Jiske: volgens mij niet nodig 
-			brokenDVDs++;
-		} else {
-			m2Idle[e.machineNum] = true;
-			m2WaitingDVD.set(e.machineNum, e.dvd);
-		}
-		if(!m2Idle[e.machineNum]){
+		if (!cbIdle[e.machineNum]){
+			if (dvdBrokenRand > .02 && !cbIdle[e.machineNum]) { // DVDs to conveyor belt
+				m2DVDsFinished++;
+				Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
+				eventList.add(cbScheduledFinished);
+				m2Busy[e.machineNum] = false;
+			} else { // DVD breaks
+				// delete DVD
+				// e.dvd = null; // Jiske: volgens mij niet nodig 
+				brokenDVDs++;
+			}
+			// In case any M1 of this M2 is Idle	
 			int option1 = 5;
 			int option2 = 5;
 			if(e.machineNum == 0){
@@ -318,38 +249,44 @@ public class DVDfactory {
 				eventList.add(m1Finished);
 				m1Idle[option2] = false;
 			}
+			// If buffer not empty schedule new m2Finished
 			if(!bufferList.get(e.machineNum).isEmpty()){
 				DVD new_dvd = bufferList.get(e.machineNum).remove(); 
 				Event m2Finished = new Event(eventTimeM2(),4,e.machineNum,new_dvd);
 				eventList.add(m2Finished);
 				m2Busy[e.machineNum] = true;
 			}
+		// If conveyor belt is idle set m2Idle true
+		} else {
+			m2Idle[e.machineNum] = true;
+			m2WaitingDVD.set(e.machineNum, e.dvd);
 		}
-		
 	}
 	
 	private static void cbScheduledFinished(Event e) {
-		ArrayList<DVD> tempCrateFront = new ArrayList<DVD>();
-		tempCrateFront = crateFrontList.get(e.machineNum);
+		cbFinish++;
+	//	ArrayList<DVD> tempCrateFront = new ArrayList<DVD>();
+	//	tempCrateFront = crateFrontList.get(e.machineNum);
 		currentTime = e.eventTime;
 		if(!cbIdle[e.machineNum]){
 			// If not 20 put DVD in crate
-			if(crateFrontCount < 20){ 
-				tempCrateFront.set(crateFrontCount,e.dvd);
-				crateFrontCount++;
+			if(crateFrontList.get(e.machineNum).size() < 20){ 
+				crateFrontList.get(e.machineNum).add(e.dvd);
 				// If it becomes 20 by doing so create swap crates event. 
-				if(crateFrontCount == 20){
+				if(crateFrontList.get(e.machineNum).size() == 20){
 					Event swapCrates = new Event(currentTime,6,e.machineNum,null);
 					eventList.add(swapCrates);
 					cbWaitingForSwap[e.machineNum] = true; // Jiske: Denk dat dit toch nodig is. 
 				}
-			// If 
+			// If 20 
 			} else {
+				System.out.println("nu moet ie idle worden");
 				cbIdle[e.machineNum] = true;
 				cbIdleTime[e.machineNum] = currentTime;
 				cbWaitingTime.get(e.machineNum).add(0);
 				cbWaitingDVD.get(e.machineNum).add(e.dvd);
 			}
+		// if cb idle
 		} else {
 			int waitingTime = currentTime - cbIdleTime[e.machineNum];
 			cbWaitingTime.get(e.machineNum).add(waitingTime);
@@ -419,10 +356,11 @@ public class DVDfactory {
 		}
 		System.out.println("Total number of DVDs broken in machine 2: " + brokenDVDs);	
 		System.out.println("Total number of DVDs finished in machine 2: " + m2DVDsFinished);
+		System.out.println("Total number of DVDs finished cb: " + cbFinish);
 		System.out.println("DVDs on conveyor belt 0: " + cbWaitingDVD.get(0).size());
 		System.out.println("DVDs on conveyor belt 1: " + cbWaitingDVD.get(1).size());
 		for(int i = 0; i<amountM2; i++) {
-			System.out.println("DVDs in crateFront " + (i) + ": " + crateFrontCount);
+			System.out.println("DVDs in crateFront " + (i) + ": " + crateFrontList.get(i).size());
 		}
 		System.out.print("Idle machines are: ");
 		for(int i = 0; i<amountM1; i++) { // volgens mij klopt het niet hoe het gaat met repairen en idle zijn. Ik denk dat we dat niet goed weer veranderen ofzo. 
