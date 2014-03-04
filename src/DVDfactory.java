@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class DVDfactory {
 	
 
-/////------------------------------------ Testing	---------------------------------------\\\\\\\\\\	
+/////-------------------------------------------- Testing	-------------------------------\\\\\\\\\\	
 	// deze dingen heb ik aangemaakt om te testen
 	public static int dvdsStarted = 0;
 	public static int totalRepairTime = 0;
@@ -137,10 +137,10 @@ public class DVDfactory {
 			cartridge[i] = getCartridgeSize();
 			countDVDs[i] = 0;
 		}
-		Event endSimulationEvent = new Event((2*60*60),11,0,null);
+		Event endSimulationEvent = new Event((24*60*60),11,0,null);
 		eventList.add(endSimulationEvent);
 		
-		Event newHourCheck = new Event(currentTime+(60)+1,10,0,null);
+		Event newHourCheck = new Event(currentTime+(60*60)+1,10,0,null);
 		eventList.add(newHourCheck);
 		
 	}
@@ -302,7 +302,7 @@ public class DVDfactory {
 			for(int j = 0; j < m3_3WaitingForSwap.length; j++ ) {
 				for(int k = 0; k < m4Idle.length; k++) {
 					if(cbWaitingForSwap[i] && m3_3WaitingForSwap[j] && m4Idle[k]){
-						tempCrateFront = (ArrayList<DVD>) crateInList.get(j).clone();
+						tempCrateFront = (ArrayList<DVD>) crateFrontList.get(i).clone();
 						tempCrateIn = (ArrayList<DVD>) crateInList.get(j).clone();
 						
 						crateBackList.set(k,tempCrateIn);
@@ -322,6 +322,13 @@ public class DVDfactory {
 							DVD this_DVD = cbWaitingDVD.get(i).remove();
 							Event CBfinished = new Event((currentTime + cbWaitingTime.get(i).remove()),5,i,this_DVD);
 							eventList.add(CBfinished);
+						}
+						
+						if(m2Busy[i]) {
+							m2Idle[i] = false;
+							Event m2ScheduledFinished = new Event(currentTime,4,i,m2WaitingDVD.get(i));
+							eventList.add(m2ScheduledFinished);
+							
 						}
 						
 						if(!m4Repairing[k]) {
@@ -371,16 +378,13 @@ public class DVDfactory {
     }
 	
 	private static void m4ScheduledFinished(Event e) {
-		int dvdIndex=0;
 		currentTime = e.eventTime;
 		if(!crateBackList.get(e.machineNum).isEmpty()){
 			if (countDVDs[e.machineNum] < cartridge[e.machineNum] ) {
 				m4Repairing[e.machineNum] = false;
 				countDVDs[e.machineNum]++;
 				
-				// Get index of first dvd to be removed
-				dvdIndex = crateSize - crateBackList.get(e.machineNum).size();
-				DVD this_dvd = crateBackList.get(e.machineNum).remove(dvdIndex);
+				DVD this_dvd = crateBackList.get(e.machineNum).remove(0);
 				producedDVDQueue.add(this_dvd);
 				
 				if(crateBackList.get(e.machineNum).isEmpty()){
@@ -410,7 +414,7 @@ public class DVDfactory {
 	private static void hourCheck(Event e){
 		currentTime = e.eventTime;
 		hour++;
-		System.out.println("Minute: " + hour);
+		System.out.println("Hour: " + hour);
 		System.out.println("Total number of DVDs started machine 1: " + dvdsStarted);
 		for(int i = 0; i<amountM2; i++) {
 			System.out.println("DVDs in buffer " + (i) + ": " + bufferList.get(i).size());
@@ -467,7 +471,7 @@ public class DVDfactory {
 		}
 		System.out.println();
 		System.out.println("---");
-		Event newHourCheck = new Event(currentTime+(60),10,0,null);
+		Event newHourCheck = new Event(currentTime+(60*60),10,0,null);
 		eventList.add(newHourCheck);
 	}
 
