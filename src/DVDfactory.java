@@ -35,6 +35,7 @@ public class DVDfactory {
 	// Sometimes events are set to be infinite, but we still need their data i.e. if the machine is idle.
 	// In this case we need to save the DVD data in another array. 
 	public static PriorityQueue<Event> eventList = new PriorityQueue<Event>();
+	public static Queue<DVD> producedDVDQueue = new LinkedList<DVD>();
 	
 	// states for all machines 1
 	public static boolean[] m1Repairing = new boolean[amountM1];
@@ -74,7 +75,7 @@ public class DVDfactory {
 	public static boolean[] m4Idle = new boolean[amountM4];
 	public static boolean[] m4Repairing = new boolean[amountM4];
 	public static int[] cartridge = new int[amountM4]; 
-	public static int[] countDVDsC = new int[amountM4];
+	public static int[] countDVDs = new int[amountM4];
 	
 	
 	
@@ -91,7 +92,7 @@ public class DVDfactory {
 			m1Idle[i] = false;
 			m1RestTime[i] = 0;
 			
-			DVD dvd = new DVD(0,1,i);
+			DVD dvd = new DVD(0,0);
 			Event m1FinishedEvent = new Event((currentTime+eventTimeM1()),1,i,dvd);
 			Event m1StartRepairEvent = new Event((currentTime+eventTimeStartRepairM1()),2,i,null);
 			
@@ -134,7 +135,7 @@ public class DVDfactory {
 			m4Repairing[i] = false;
 			m4Idle[i] = false;
 			cartridge[i] = getCartridgeSize();
-			countDVDsC[i] = 0;
+			countDVDs[i] = 0;
 		}
 		Event endSimulationEvent = new Event((2*60*60),11,0,null);
 		eventList.add(endSimulationEvent);
@@ -160,7 +161,7 @@ public class DVDfactory {
 		currentTime = e.eventTime;
 		if(!m1Repairing[e.machineNum]) { 
 			if(bufferList.get(indexBuffer).size() <20) {
-				DVD new_dvd = new DVD(currentTime,e.dvd.productionStep, e.dvd.machineNum);
+				DVD new_dvd = new DVD(currentTime, 0);
 				Event m1Finished = new Event(eventTimeM1(),1,e.machineNum,new_dvd);
 				eventList.add(m1Finished);
 				dvdsStarted++;
@@ -294,14 +295,6 @@ public class DVDfactory {
 		}
 	}
 	
-	private static void m4ScheduledFinished(Event e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-
-	
 
     private static void m3_12ScheduledFinished(Event e) {
     	currentTime = e.eventTime;
@@ -337,6 +330,39 @@ public class DVDfactory {
         Event cratesScheduledSwap = new Event(currentTime,6,e.machineNum,null);
         eventList.add(cratesScheduledSwap);
     }
+	
+	private static void m4ScheduledFinished(Event e) {
+		// TODO Auto-generated method stub
+		int dvdIndex=0;
+		currentTime = e.eventTime;
+		
+		if (countDVDs[e.machineNum] < cartridge[e.machineNum] ) {
+			m4Repairing[e.machineNum] = false;
+			countDVDs[e.machineNum]++;
+			
+			// Get index of first dvd to be removed
+			dvdIndex = crateSize - crateBackList.get(e.machineNum).size();
+			DVD this_dvd = crateBackList.get(e.machineNum).remove(dvdIndex);
+			producedDVDQueue.add(this_dvd);
+			
+			if(crateBackList.get(e.machineNum).isEmpty()){
+				m4Idle[e.machineNum] = true;
+				Event crateScheduledSwap = new Event(currentTime,6,e.machineNum,null);
+				eventList.add(crateScheduledSwap);
+			} else {
+				Event m4ScheduledFinished = new Event(eventTimeM4(),9,e.machineNum,null);
+				eventList.add(m4ScheduledFinished);
+			}
+			
+		} else {
+			cartridge[e.machineNum] = getCartridgeSize();
+			countDVDs[e.machineNum] = 0;
+			Event m4ScheduledFinished = new Event(eventTimeM4()+eventTimeM4Refill(),9,e.machineNum,null);
+			eventList.add(m4ScheduledFinished);
+		}
+		
+	}
+
 
 
 	private static void cratesScheduledSwap(Event e) {
@@ -446,6 +472,11 @@ public class DVDfactory {
 		} else {
 			if (rand2 <= .5) return 202; else return 198;
 		}
+	}
+	
+	private static int eventTimeM4Refill() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 	
 	/////-------------------------------------------- Main method ------------------------------------------\\\\\\\\\
