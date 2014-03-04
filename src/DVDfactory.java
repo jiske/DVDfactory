@@ -18,6 +18,10 @@ public class DVDfactory {
 	public static int hour = 0;
 	public static int m2DVDsFinished = 0;
 	public static int cbFinish = 0;
+	public static int m3_12Int = 0;
+	public static int m3_3Int = 0;
+	public static int m4Int = 0;
+	public static int cSwapInt = 0;
 	
 	
 /////------------------------------------ Declarations and init() --------------------------\\\\\\\\\
@@ -29,11 +33,8 @@ public class DVDfactory {
 	public static int amountM2 = 2;
 	public static int amountM3 = 2;
 	public static int amountM4 = 2;
-
 	
-	// This should be a priorityqueue, with DVD.eventTime as keys. We will always need the first event.
-	// Sometimes events are set to be infinite, but we still need their data i.e. if the machine is idle.
-	// In this case we need to save the DVD data in another array. 
+	 
 	public static PriorityQueue<Event> eventList = new PriorityQueue<Event>();
 	public static Queue<DVD> producedDVDQueue = new LinkedList<DVD>();
 	
@@ -44,7 +45,7 @@ public class DVDfactory {
 	public static ArrayList<DVD> m1DVDWaiting = new ArrayList<DVD>();
 	public static int[] m1StartRepairTime = new int[amountM1];
 	
-	// states for all buffers  //
+	// states for all buffers 
 	public static LinkedList<Queue<DVD>> bufferList = new LinkedList<Queue<DVD>>();
 
 	// state for all machines 2
@@ -101,14 +102,13 @@ public class DVDfactory {
 			m1DVDWaiting.add(i,null);
 			dvdsStarted++;
 		}
-		System.out.println(dvdsStarted);
-		//dvdsStarted = 4;
 		
 		// ProductionStep 2 is running, and all buffers are empty
 		for ( int i = 0; i < amountM2; i++){
 			cbIdle[i] = false;
 			m2Idle[i] = false;
 			m2Busy[i] = false;
+			cbWaitingForSwap[i] = false;
 			Queue<DVD> buffer = new LinkedList<DVD>();
 			bufferList.add(buffer);
 			Queue<Integer> cbWaitTime = new LinkedList<Integer>();
@@ -120,7 +120,7 @@ public class DVDfactory {
 		
 		// All crates are empty
 		for ( int i = 0; i < amountM3; i++){
-			m3_3WaitingForSwap[i] = false;
+			m3_3WaitingForSwap[i] = true;
 			ArrayList<DVD> crateFront = new ArrayList<DVD>();
 			ArrayList<DVD> crateIn = new ArrayList<DVD>();
 			ArrayList<DVD> crateBack = new ArrayList<DVD>();
@@ -133,14 +133,14 @@ public class DVDfactory {
 		// ProductionStep 4 is running, and cartridgeSize is initialized
 		for ( int i = 0; i < amountM4; i++){
 			m4Repairing[i] = false;
-			m4Idle[i] = false;
+			m4Idle[i] = true;
 			cartridge[i] = getCartridgeSize();
 			countDVDs[i] = 0;
 		}
 		Event endSimulationEvent = new Event((2*60*60),11,0,null);
 		eventList.add(endSimulationEvent);
 		
-		Event newHourCheck = new Event(currentTime+(5*60)+1,10,0,null);
+		Event newHourCheck = new Event(currentTime+(60)+1,10,0,null);
 		eventList.add(newHourCheck);
 		
 	}
@@ -194,7 +194,7 @@ public class DVDfactory {
 		eventList.add(m1FinishedRepairing);
 		m1Idle[e.machineNum] = false;
 	}
-
+	
 	private static void m1FinishedRepairing(Event e){
 		currentTime = e.eventTime;
 		if(!m1Idle[e.machineNum]) {
@@ -220,11 +220,11 @@ public class DVDfactory {
 		dvdBrokenRand = rand.nextDouble();
 		
 		if (!cbIdle[e.machineNum]){
-			if (dvdBrokenRand > .02 && !cbIdle[e.machineNum]) { // DVDs to conveyor belt
+			m2Busy[e.machineNum] = false;
+			if (dvdBrokenRand > .02) { // DVDs to conveyor belt
 				m2DVDsFinished++;
 				Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
 				eventList.add(cbScheduledFinished);
-				m2Busy[e.machineNum] = false;
 			} else { // DVD breaks
 				// delete DVD
 				// e.dvd = null; // Jiske: volgens mij niet nodig 
@@ -266,8 +266,6 @@ public class DVDfactory {
 	
 	private static void cbScheduledFinished(Event e) {
 		cbFinish++;
-	//	ArrayList<DVD> tempCrateFront = new ArrayList<DVD>();
-	//	tempCrateFront = crateFrontList.get(e.machineNum);
 		currentTime = e.eventTime;
 		if(!cbIdle[e.machineNum]){
 			// If not 20 put DVD in crate
@@ -281,7 +279,6 @@ public class DVDfactory {
 				}
 			// If 20 
 			} else {
-				System.out.println("nu moet ie idle worden");
 				cbIdle[e.machineNum] = true;
 				cbIdleTime[e.machineNum] = currentTime;
 				cbWaitingTime.get(e.machineNum).add(0);
@@ -295,75 +292,6 @@ public class DVDfactory {
 		}
 	}
 	
-
-    private static void m3_12ScheduledFinished(Event e) {
-    	currentTime = e.eventTime;
-           
-        //Delay in seconds
-        int delay = 0;
-       
-        // Make a random object
-        Random rand = new Random();
-        double nozzleBlockChance;
-       
-        // Make temporary Arraylist for easy access.
-        ArrayList<DVD> tempCrateIn = new ArrayList<DVD>();
-        tempCrateIn = crateInList.get(e.machineNum);
-       
-        // Loop over the crate that is currently in the machine
-        // check for each dvd if the nozzle gets blocked.
-            for(int i = 0; i < tempCrateIn.size(); i++){
-                    nozzleBlockChance = rand.nextDouble();
-                    if (nozzleBlockChance < .03) {
-                            delay += 300;
-                    }
-            }
-           
-            Event m3_3Finished = new Event((eventTimeM3_3()+delay),8,e.machineNum,null);
-            eventList.add(m3_3Finished);
-       
-        }
-
-	private static void m3_3ScheduledFinished(Event e) {
-        currentTime = e.eventTime;
-        m3_3WaitingForSwap[e.machineNum] = true;
-        Event cratesScheduledSwap = new Event(currentTime,6,e.machineNum,null);
-        eventList.add(cratesScheduledSwap);
-    }
-	
-	private static void m4ScheduledFinished(Event e) {
-		int dvdIndex=0;
-		currentTime = e.eventTime;
-		
-		if (countDVDs[e.machineNum] < cartridge[e.machineNum] ) {
-			m4Repairing[e.machineNum] = false;
-			countDVDs[e.machineNum]++;
-			
-			// Get index of first dvd to be removed
-			dvdIndex = crateSize - crateBackList.get(e.machineNum).size();
-			DVD this_dvd = crateBackList.get(e.machineNum).remove(dvdIndex);
-			producedDVDQueue.add(this_dvd);
-			
-			if(crateBackList.get(e.machineNum).isEmpty()){
-				m4Idle[e.machineNum] = true;
-				Event crateScheduledSwap = new Event(currentTime,6,e.machineNum,null);
-				eventList.add(crateScheduledSwap);
-			} else {
-				Event m4ScheduledFinished = new Event(eventTimeM4(),9,e.machineNum,null);
-				eventList.add(m4ScheduledFinished);
-			}
-			
-		} else {
-			cartridge[e.machineNum] = getCartridgeSize();
-			countDVDs[e.machineNum] = 0;
-			Event m4ScheduledFinished = new Event(eventTimeM4()+eventTimeM4Refill(),9,e.machineNum,null);
-			eventList.add(m4ScheduledFinished);
-		}
-		
-	}
-
-
-
 	private static void cratesScheduledSwap(Event e) {
 		currentTime = e.eventTime;
 		
@@ -404,8 +332,77 @@ public class DVDfactory {
 				}
 			}
 		}
-		
 	}
+	
+	/// CALL EVENT 3_12 ADDED
+    private static void m3_12ScheduledFinished(Event e) {
+    	currentTime = e.eventTime;
+           
+        //Delay in seconds
+        int delay = 0;
+       
+        // Make a random object
+        Random rand = new Random();
+        double nozzleBlockChance;
+       
+        // Make temporary Arraylist for easy access.
+        ArrayList<DVD> tempCrateIn = new ArrayList<DVD>();
+        tempCrateIn = crateInList.get(e.machineNum);
+       
+        // Loop over the crate that is currently in the machine
+        // check for each dvd if the nozzle gets blocked.
+            for(int i = 0; i < tempCrateIn.size(); i++){
+                    nozzleBlockChance = rand.nextDouble();
+                    if (nozzleBlockChance < .03) {
+                            delay += 300;
+                    }
+            }
+           
+            Event m3_3Finished = new Event((eventTimeM3_3()+delay),8,e.machineNum,null);
+            eventList.add(m3_3Finished);
+       
+        }
+
+	private static void m3_3ScheduledFinished(Event e) {
+        currentTime = e.eventTime;
+        m3_3WaitingForSwap[e.machineNum] = true;
+        Event cratesScheduledSwap = new Event(currentTime,6,e.machineNum,null);
+        eventList.add(cratesScheduledSwap);
+    }
+	
+	private static void m4ScheduledFinished(Event e) {
+		int dvdIndex=0;
+		currentTime = e.eventTime;
+		if(!crateBackList.get(e.machineNum).isEmpty()){
+			if (countDVDs[e.machineNum] < cartridge[e.machineNum] ) {
+				m4Repairing[e.machineNum] = false;
+				countDVDs[e.machineNum]++;
+				
+				// Get index of first dvd to be removed
+				dvdIndex = crateSize - crateBackList.get(e.machineNum).size();
+				DVD this_dvd = crateBackList.get(e.machineNum).remove(dvdIndex);
+				producedDVDQueue.add(this_dvd);
+				
+				if(crateBackList.get(e.machineNum).isEmpty()){
+					m4Idle[e.machineNum] = true;
+					Event crateScheduledSwap = new Event(currentTime,6,e.machineNum,null);
+					eventList.add(crateScheduledSwap);
+				} else {
+					Event m4ScheduledFinished = new Event(eventTimeM4(),9,e.machineNum,null);
+					eventList.add(m4ScheduledFinished);
+				}
+				
+			} else {
+				cartridge[e.machineNum] = getCartridgeSize();
+				countDVDs[e.machineNum] = 0;
+				Event m4ScheduledFinished = new Event(eventTimeM4()+eventTimeM4Refill(),9,e.machineNum,null);
+				eventList.add(m4ScheduledFinished);
+			}
+		} else {
+			m4Idle[e.machineNum] = true;
+		}
+	}
+
 	
 /////------------------------------------ Checking --------------------------------------\\\\\\\\\
 
@@ -413,7 +410,7 @@ public class DVDfactory {
 	private static void hourCheck(Event e){
 		currentTime = e.eventTime;
 		hour++;
-		System.out.println("Hour: " + hour);
+		System.out.println("Minute: " + hour);
 		System.out.println("Total number of DVDs started machine 1: " + dvdsStarted);
 		for(int i = 0; i<amountM2; i++) {
 			System.out.println("DVDs in buffer " + (i) + ": " + bufferList.get(i).size());
@@ -423,11 +420,23 @@ public class DVDfactory {
 		System.out.println("Total number of DVDs finished cb: " + cbFinish);
 		System.out.println("DVDs on conveyor belt 0: " + cbWaitingDVD.get(0).size());
 		System.out.println("DVDs on conveyor belt 1: " + cbWaitingDVD.get(1).size());
+
 		for(int i = 0; i<amountM2; i++) {
 			System.out.println("DVDs in crateFront " + (i) + ": " + crateFrontList.get(i).size());
 		}
+		for(int i = 0; i<amountM2; i++) {
+			System.out.println("DVDs in crateIn " + (i) + ": " + crateInList.get(i).size());
+		}
+		for(int i = 0; i<amountM2; i++) {
+			System.out.println("DVDs in crateBack " + (i) + ": " + crateBackList.get(i).size());
+		}
+		System.out.println("Calls to method cbSwap: " + cSwapInt);
+		System.out.println("Calls to method m3_12: " + m3_12Int);
+		System.out.println("Calls to method m3_3: " + m3_3Int);
+		System.out.println("Calls to method m4: " + m4Int);
+		System.out.println("Total DVD's produced: " + producedDVDQueue.size());
 		System.out.print("Idle machines are: ");
-		for(int i = 0; i<amountM1; i++) { // volgens mij klopt het niet hoe het gaat met repairen en idle zijn. Ik denk dat we dat niet goed weer veranderen ofzo. 
+		for(int i = 0; i<amountM1; i++) { 
 			if (m1Idle[i]){
 				System.out.print("M1." + (i) + ", ");
 			}
@@ -454,11 +463,11 @@ public class DVDfactory {
 		for(int i = 0; i<amountM2; i++) {
 			if (m2Busy[i]){
 				System.out.print("M2." + (i) + ", ");
-			} 
+			}
 		}
 		System.out.println();
 		System.out.println("---");
-		Event newHourCheck = new Event(currentTime+(5*60),10,0,null);
+		Event newHourCheck = new Event(currentTime+(60),10,0,null);
 		eventList.add(newHourCheck);
 	}
 
@@ -486,9 +495,10 @@ public class DVDfactory {
 		return currentTime + 24;
 	}
 	
+	/// HOI
 	private static int eventTimeM3_1() {
 		// TODO Auto-generated method stub
-		return currentTime + 20;
+		return 20;
 	}
 	
 	private static int eventTimeM3_2() {
@@ -533,7 +543,6 @@ public class DVDfactory {
 	
 	public static void main(String[] args){
 		init();
-		System.out.println("Compiles, at least.");
 		
 		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
 		while(eventList.peek().eventStep != 11 ) {
@@ -550,15 +559,18 @@ public class DVDfactory {
 			case 5: cbScheduledFinished(e);
 					break;
 			case 6: cratesScheduledSwap(e);
+					cSwapInt++;
 					break;
 			case 7: m3_12ScheduledFinished(e);
+					m3_12Int++;
 					break;
 			case 8: m3_3ScheduledFinished(e);
+					m3_3Int++;
 					break;
-			case 9: m4ScheduledFinished(e); 
+			case 9: m4ScheduledFinished(e);
+					m4Int++;
 					break;
 			case 10: hourCheck(e);
-					//System.out.println("This is happening");
 					break;
 			default: System.out.println("What's happening?!?!");
 			}
