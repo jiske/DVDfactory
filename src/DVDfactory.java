@@ -2,6 +2,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.PriorityQueue;
+import java.util.ArrayList;
 
 
 public class DVDfactory {
@@ -38,14 +39,11 @@ public class DVDfactory {
 	public static boolean[] m1Repairing = new boolean[amountM1];
 	public static boolean[] m1Idle = new boolean[amountM1];
 	public static int[] m1RestTime = new int[amountM1];
-	public static DVD[] m1DVDWaiting = new DVD[amountM1];
+	public static ArrayList<DVD> m1DVDWaiting = new ArrayList<DVD>();
 	public static int[] m1StartRepairTime = new int[amountM1];
 	
-	// states for all buffers  //!!!!!!! buffers werken niet.
+	// states for all buffers  //
 	public static LinkedList<Queue<DVD>> bufferList = new LinkedList<Queue<DVD>>();
-//	public static Queue<DVD> buffer = new LinkedList<DVD>(); //Jiske: volgens mij hoeft dit.
-
-	//public static int[] dvdsInBuffer = new int[amountM2];
 
 	// state for all machines 2
 	public static boolean[] m2Idle = new boolean[amountM2];
@@ -57,21 +55,19 @@ public class DVDfactory {
 	public static boolean[] cbIdle = new boolean[amountM2];
 	public static int[] cbIdleTime = new int[amountM2];
 	public static LinkedList<Queue<Integer>> cbWaitingTime = new LinkedList<Queue<Integer>>();
-//	public static Queue<Integer> cbWaitTime = new LinkedList<Integer>(); //Jiske: volgens mij hoeft dit.
 	public static LinkedList<Queue<DVD>> cbWaitingDVD = new LinkedList<Queue<DVD>>();
-//	public static Queue<DVD> cbWaitDVD = new LinkedList<DVD>(); //Jiske: volgens mij hoeft dit.
 	public static boolean[] cbWaitingForSwap = new boolean[amountM2];
 	
 	// state for all crates in front of machine 3
-	public static DVD[][] crateFront = new DVD[amountM3][crateSize];
+	public static ArrayList<ArrayList<DVD>> crateFrontList = new ArrayList<ArrayList<DVD>>();
 	public static int crateFrontCount = 0;
 	
 	// state for all crates in machine 3
-	public static DVD[][] crateIn = new DVD[amountM3][crateSize];
+	public static ArrayList<ArrayList<DVD>> crateInList = new ArrayList<ArrayList<DVD>>();
 	public static int crateInCount = 0;
 	
 	// state for all crates in front of machine 4
-	public static DVD[][] crateBack = new DVD[amountM4][crateSize];
+	public static ArrayList<ArrayList<DVD>> crateBackList = new ArrayList<ArrayList<DVD>>();
 	public static int crateBackCount = 0;
 	
 	// state for all machine 3	
@@ -104,6 +100,7 @@ public class DVDfactory {
 			
 			eventList.add(m1FinishedEvent);
 			eventList.add(m1StartRepairEvent);
+			m1DVDWaiting.add(i,null);
 			dvdsStarted++; // testing
 		}
 		
@@ -122,12 +119,17 @@ public class DVDfactory {
 		// All crates are empty
 		for ( int i = 0; i < amountM3; i++){
 			m3_3WaitingForSwap[i] = false;
-			
+			ArrayList<DVD> crateFront = new ArrayList<DVD>();
+			ArrayList<DVD> crateIn = new ArrayList<DVD>();
+			ArrayList<DVD> crateBack = new ArrayList<DVD>();
 			for(int j = 0; j < crateSize; j++ ) {
-				crateFront[i][j] = null;
-				crateIn[i][j] = null;
-				crateBack[i][j] = null;
+				crateFront.add(j,null);
+				crateIn.add(j,null);
+				crateBack.add(j,null);
 			}
+			crateFrontList.add(i,crateFront);
+			crateInList.add(i,crateIn);
+			crateBackList.add(i,crateBack);
 		}
 		
 		// ProductionStep 4 is running, and cartridgeSize is initialized
@@ -177,11 +179,11 @@ public class DVDfactory {
 				}	
 			} else {
 				m1Idle[e.machineNum] = true;
-				m1DVDWaiting[e.machineNum] = e.dvd;
+				m1DVDWaiting.set(e.machineNum, e.dvd);
 			}
 		} else {
-			m1RestTime[e.dvd.machineNum] = currentTime - m1StartRepairTime[e.dvd.machineNum];
-			m1DVDWaiting[e.dvd.machineNum] = e.dvd;
+			m1RestTime[e.machineNum] = currentTime - m1StartRepairTime[e.machineNum];
+			m1DVDWaiting.set(e.machineNum, e.dvd);
 			
 		}
 		// Machines go from 4 to 2, so we need to change machineNum accordingly
@@ -201,8 +203,8 @@ public class DVDfactory {
 		currentTime = e.eventTime;
 		if(!m1Idle[e.machineNum]) {
 			int time = (currentTime+m1RestTime[e.machineNum]);
-			Event m1Finished = new Event(time,1,e.machineNum,m1DVDWaiting[e.machineNum]);
-			//m1DVDWaiting[e.machineNum] = null; // remove DVD from waiting list. !!!!!!!!!!!!!!!Opletten!!!!!!!!!!!!!!!!!!!!
+			Event m1Finished = new Event(time,1,e.machineNum,m1DVDWaiting.get(e.machineNum));
+			// m1DVDWaiting[e.machineNum] = null; // remove DVD from waiting list. !!!!!!!!!!!!!!!Opletten!!!!!!!!!!!!!!!!!!!!
 			m1RestTime[e.machineNum] = 0;
 			eventList.add(m1Finished);
 		}
@@ -304,12 +306,12 @@ public class DVDfactory {
 				option2 = 3;
 			}
 			if (m1Idle[option1]){
-				Event m1Finished = new Event(currentTime,1,option1,m1DVDWaiting[option1]);
+				Event m1Finished = new Event(currentTime,1,option1,m1DVDWaiting.get(option1));
 				eventList.add(m1Finished);
 				m1Idle[option1] = false;
 			}
 			if (m1Idle[option2]){
-				Event m1Finished = new Event(currentTime,1,option2,m1DVDWaiting[option2]);
+				Event m1Finished = new Event(currentTime,1,option2,m1DVDWaiting.get(option2));
 				eventList.add(m1Finished);
 				m1Idle[option2] = false;
 			}
@@ -324,11 +326,13 @@ public class DVDfactory {
 	}
 	
 	private static void cbScheduledFinished(Event e) {
+		ArrayList<DVD> tempCrateFront = new ArrayList<DVD>();
+		tempCrateFront = crateFrontList.get(e.machineNum);
 		currentTime = e.eventTime;
 		if(cbIdle[e.machineNum]){
 			// If not 20 put DVD in crate
 			if(crateFrontCount < 20){ 
-				crateFront[e.machineNum][crateFrontCount] = e.dvd;
+				tempCrateFront.set(crateFrontCount,e.dvd);
 				crateFrontCount++;
 				// If it becomes 20 by doing so create swap crates event. 
 				if(crateFrontCount == 20){
