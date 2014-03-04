@@ -46,7 +46,7 @@ public class DVDfactory {
 	public static int[] m1StartRepairTime = new int[amountM1];
 	
 	// states for all buffers 
-	public static LinkedList<Queue<DVD>> bufferList = new LinkedList<Queue<DVD>>();
+	public static ArrayList<Queue<DVD>> bufferList = new ArrayList<Queue<DVD>>();
 
 	// state for all machines 2
 	public static boolean[] m2Idle = new boolean[amountM2];
@@ -56,8 +56,8 @@ public class DVDfactory {
 	// state for conveyor belt 
 	public static boolean[] cbIdle = new boolean[amountM2];
 	public static int[] cbIdleTime = new int[amountM2];
-	public static LinkedList<Queue<Integer>> cbWaitingTime = new LinkedList<Queue<Integer>>();
-	public static LinkedList<Queue<DVD>> cbWaitingDVD = new LinkedList<Queue<DVD>>();
+	public static ArrayList<Queue<Integer>> cbWaitingTime = new ArrayList<Queue<Integer>>();
+	public static ArrayList<Queue<DVD>> cbWaitingDVD = new ArrayList<Queue<DVD>>();
 	public static boolean[] cbWaitingForSwap = new boolean[amountM2];
 	
 	// state for all crates in front of machine 3
@@ -169,7 +169,7 @@ public class DVDfactory {
 					
 					Event m2Finished = new Event(eventTimeM2(),4,indexBuffer,e.dvd);	
 					eventList.add(m2Finished);
-					m2Busy[indexBuffer] = true; // !!!!!!!!!!!!!!! volgens mij is dit nodig om te checken of er niet nog een DVD in die machine zit 
+					m2Busy[indexBuffer] = true;  
 				} else {
 					bufferList.get(indexBuffer).add(e.dvd);
 				}	
@@ -200,7 +200,6 @@ public class DVDfactory {
 		if(!m1Idle[e.machineNum]) {
 			int time = (currentTime+m1RestTime[e.machineNum]);
 			Event m1Finished = new Event(time,1,e.machineNum,m1DVDWaiting.get(e.machineNum));
-			// m1DVDWaiting[e.machineNum] = null; // remove DVD from waiting list. !!!!!!!!!!!!!!!Opletten!!!!!!!!!!!!!!!!!!!!
 			m1RestTime[e.machineNum] = 0;
 			eventList.add(m1Finished);
 		}
@@ -211,7 +210,7 @@ public class DVDfactory {
 		eventList.add(m1StartRepairEvent);
 	}
 	
-	private static void m2ScheduledFinished(Event e) { // !!!!!!! Jiske: deze heb ik dus geschreven
+	private static void m2ScheduledFinished(Event e) { 
 		currentTime = e.eventTime;
 		
 		// Again, we still need to check this PRNG.
@@ -309,7 +308,7 @@ public class DVDfactory {
 						crateInList.set(j,tempCrateFront);
 						crateFrontList.get(i).clear();
 						
-						Event m3_12ScheduledFinished = new Event(eventTimeM3_1()+eventTimeM3_2(),7,j,null);
+						Event m3_12ScheduledFinished = new Event(eventTimeM3_12(),7,j,null);
 						eventList.add(m3_12ScheduledFinished);
 						
 						
@@ -341,7 +340,6 @@ public class DVDfactory {
 		}
 	}
 	
-	/// CALL EVENT 3_12 ADDED
     private static void m3_12ScheduledFinished(Event e) {
     	currentTime = e.eventTime;
            
@@ -392,11 +390,13 @@ public class DVDfactory {
 					Event crateScheduledSwap = new Event(currentTime,6,e.machineNum,null);
 					eventList.add(crateScheduledSwap);
 				} else {
+					//System.out.println("KOM IK HIER WEL ALTIJD????");
 					Event m4ScheduledFinished = new Event(eventTimeM4(),9,e.machineNum,null);
 					eventList.add(m4ScheduledFinished);
 				}
 				
 			} else {
+				
 				cartridge[e.machineNum] = getCartridgeSize();
 				countDVDs[e.machineNum] = 0;
 				Event m4ScheduledFinished = new Event(eventTimeM4()+eventTimeM4Refill(),9,e.machineNum,null);
@@ -455,6 +455,17 @@ public class DVDfactory {
 				System.out.print("CB." + (i) + ", ");
 			}
 		}
+		for(int i = 0; i<amountM3; i++){
+			if (m3_3WaitingForSwap[i]){
+				System.out.print("M3." + (i) + ", ");
+			}
+		}
+		for(int i = 0; i<amountM4; i++){
+			if (m4Idle[i]){
+				System.out.print("M4." + (i) + ", ");
+			}
+		}
+		
 		System.out.println();
 		System.out.print("Repairing machines are: ");
 		for(int i = 0; i<amountM1; i++) {
@@ -480,38 +491,26 @@ public class DVDfactory {
 	
 
 	private static int eventTimeM1(){
-		// calculates next m1ScheduledFinished
 		return currentTime + 60;
 	}
 	
 	private static int eventTimeStartRepairM1() {
-		// TODO Auto-generated method stub
 		return currentTime + 8*60*60;
 	}
 	
 	private static int eventTimeM1FinishedRepair() {
-		// TODO Auto-generated method stub
 		return currentTime + 2*60*60;
 	}
 	
 	private static int eventTimeM2() {
-		// TODO Auto-generated method stub
 		return currentTime + 24;
 	}
 	
-	/// HOI
-	private static int eventTimeM3_1() {
-		// TODO Auto-generated method stub
-		return 20;
-	}
-	
-	private static int eventTimeM3_2() {
-		// TODO Auto-generated method stub
-		return currentTime + 20;
+	private static int eventTimeM3_12() {
+		return currentTime + 16*20;
 	}
 	
 	private static int eventTimeM3_3() {
-		// TODO Auto-generated method stub
 		return currentTime + 180;
 	}
 	
@@ -537,8 +536,7 @@ public class DVDfactory {
 	}
 	
 	private static int eventTimeM4Refill() {
-		// TODO Auto-generated method stub
-		return currentTime + 15*60;
+		return  15*60;
 	}
 	
 	/////-------------------------------------------- Main method ------------------------------------------\\\\\\\\\
