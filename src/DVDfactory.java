@@ -353,32 +353,53 @@ public class DVDfactory {
 		cbWaitingDVD.get(e.machineNum).add(e.dvd);
 	}
 	
+
+	private static void cratesScheduledSwap(Event e) {
+		currentTime = e.eventTime;
+		
+	}
+	
+	private static void m3_12ScheduledFinished(Event e) {
+		currentTime = e.eventTime;
+		
+		//Delay in seconds
+		int delay = 0;
+		
+		// Make a random object
+		Random rand = new Random();
+		double nozzleBlockChance;
+		
+		// Make temporary Arraylist for easy access.
+		ArrayList<DVD> tempCrateIn = new ArrayList<DVD>();
+		tempCrateIn = crateInList.get(e.machineNum);
+		
+		// Loop over the crate that is currently in the machine
+		// check for each dvd if the nozzle gets blocked.
+		for(int i = 0; i < tempCrateIn.size(); i++){
+			nozzleBlockChance = rand.nextDouble();
+			if (nozzleBlockChance < .03) {
+				delay += 300;
+			}
+		}
+		
+		Event m3_3Finished = new Event((eventTimeM3_3()+delay),8,e.machineNum,null);
+		eventList.add(m3_3Finished);
+	
+	}
+
+
+	private static void m3_3ScheduledFinished(Event e) {
+		currentTime = e.eventTime;
+		m3_3WaitingForSwap[e.machineNum] = true;
+		Event cratesScheduledSwap = new Event(currentTime,6,e.machineNum,null);
+		eventList.add(cratesScheduledSwap);
+	}
+
 	private static void m4ScheduledFinished(Event e) {
 		// TODO Auto-generated method stub
 		
 	}
 
-
-
-	private static void m3_3ScheduledFinished(Event e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-
-	private static void m3_12ScheduledFinished(Event e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-
-	private static void cratesScheduledSwap(Event e) {
-		// TODO Auto-generated method stub
-		
-	}
-	
 /////------------------------------------ Checking --------------------------------------\\\\\\\\\
 	
 	private static void hourCheck(Event e){
@@ -389,7 +410,7 @@ public class DVDfactory {
 		for(int i = 0; i<amountM2; i++) {
 			System.out.println("DVDs in buffer " + (i) + ": " + bufferList.get(i).size());
 		}
-		System.out.println("Total number of DVDs started machine 2: " + brokenDVDs);	
+		System.out.println("Total number of DVDs broken machine 2: " + brokenDVDs);	
 		System.out.print("Idle machines are: ");
 		for(int i = 0; i<amountM1; i++) { // volgens mij klopt het niet hoe het gaat met repairen en idle zijn. Ik denk dat we dat niet goed weer veranderen ofzo. 
 			if (m1Idle[i]){
@@ -438,6 +459,11 @@ public class DVDfactory {
 	private static int eventTimeM2() {
 		// TODO Auto-generated method stub
 		return currentTime + 24;
+	}
+	
+	private static int eventTimeM3_3() {
+		// TODO Auto-generated method stub
+		return 180;
 	}
 	
 	private static int eventTimeM4() {
