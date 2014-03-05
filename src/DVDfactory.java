@@ -1,8 +1,10 @@
+
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
-import java.util.PriorityQueue;
-import java.util.ArrayList;
+import org.apache.commons.math3.distribution.*;
 
 
 public class DVDfactory {
@@ -545,6 +547,11 @@ public class DVDfactory {
 	
 	public static void main(String[] args){
 		init();
+		double scale;
+		double shape;
+		double output;
+		LogNormalDistribution log = new LogNormalDistribution();
+		log.sample();
 		
 		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
 		while(eventList.peek().eventStep != 11 ) {
