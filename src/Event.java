@@ -2,14 +2,14 @@ import java.lang.Comparable;
 
 
 public class Event implements Comparable<Event> {
-	int eventTime = 0;
+	double eventTime = 0;
 	int eventStep = 0;
 	int machineNum = 0;
 	DVD dvd = null;
 	
 	
 	//constructor
-	public Event(int a, int b, int c, DVD d) {
+	public Event(double a, int b, int c, DVD d) {
 		 eventTime = a;
 		 eventStep = b;
 		 machineNum = c;

@@ -13,7 +13,7 @@ public class DVDfactory {
 /////-------------------------------------------- Testing	-------------------------------\\\\\\\\\\	
 	// deze dingen heb ik aangemaakt om te testen
 	public static int dvdsStarted = 0;
-	public static int totalRepairTime = 0;
+	public static double totalRepairTime = 0;
 	public static int repairNumber = 0;
 	public static int dvdsM2 = 0;
 	public static int brokenDVDs = 0;
@@ -28,7 +28,7 @@ public class DVDfactory {
 	
 /////------------------------------------ Declarations and init() --------------------------\\\\\\\\\
 
-	public static int currentTime = 0;
+	public static double currentTime = 0;
 	public static int bufferSize = 20;
 	public static int crateSize = 20;
 	public static int amountM1 = 4;
@@ -43,9 +43,9 @@ public class DVDfactory {
 	// states for all machines 1
 	public static boolean[] m1Repairing = new boolean[amountM1];
 	public static boolean[] m1Idle = new boolean[amountM1];
-	public static int[] m1RestTime = new int[amountM1];
+	public static double[] m1RestTime = new double[amountM1];
 	public static ArrayList<DVD> m1DVDWaiting = new ArrayList<DVD>();
-	public static int[] m1StartRepairTime = new int[amountM1];
+	public static double[] m1StartRepairTime = new double[amountM1];
 	
 	// states for all buffers 
 	public static ArrayList<Queue<DVD>> bufferList = new ArrayList<Queue<DVD>>();
@@ -57,8 +57,8 @@ public class DVDfactory {
 	
 	// state for conveyor belt 
 	public static boolean[] cbIdle = new boolean[amountM2];
-	public static int[] cbIdleTime = new int[amountM2];
-	public static ArrayList<Queue<Integer>> cbWaitingTime = new ArrayList<Queue<Integer>>();
+	public static double[] cbIdleTime = new double[amountM2];
+	public static ArrayList<Queue<Double>> cbWaitingTime = new ArrayList<Queue<Double>>();
 	public static ArrayList<Queue<DVD>> cbWaitingDVD = new ArrayList<Queue<DVD>>();
 	public static boolean[] cbWaitingForSwap = new boolean[amountM2];
 	
@@ -113,7 +113,7 @@ public class DVDfactory {
 			cbWaitingForSwap[i] = false;
 			Queue<DVD> buffer = new LinkedList<DVD>();
 			bufferList.add(buffer);
-			Queue<Integer> cbWaitTime = new LinkedList<Integer>();
+			Queue<Double> cbWaitTime = new LinkedList<Double>();
 			cbWaitingTime.add(cbWaitTime);
 			Queue<DVD> cbWaitDVD = new LinkedList<DVD>();
 			cbWaitingDVD.add(cbWaitDVD);
@@ -200,8 +200,8 @@ public class DVDfactory {
 	private static void m1FinishedRepairing(Event e){
 		currentTime = e.eventTime;
 		if(!m1Idle[e.machineNum]) {
-			int time = (currentTime+m1RestTime[e.machineNum]);
-			Event m1Finished = new Event(time,1,e.machineNum,m1DVDWaiting.get(e.machineNum));
+			double eventM1time = (currentTime+m1RestTime[e.machineNum]);
+			Event m1Finished = new Event(eventM1time,1,e.machineNum,m1DVDWaiting.get(e.machineNum));
 			m1RestTime[e.machineNum] = 0;
 			eventList.add(m1Finished);
 		}
@@ -282,12 +282,12 @@ public class DVDfactory {
 			} else {
 				cbIdle[e.machineNum] = true;
 				cbIdleTime[e.machineNum] = currentTime;
-				cbWaitingTime.get(e.machineNum).add(0);
+				cbWaitingTime.get(e.machineNum).add(0.0);
 				cbWaitingDVD.get(e.machineNum).add(e.dvd);
 			}
 		// if cb idle
 		} else {
-			int waitingTime = currentTime - cbIdleTime[e.machineNum];
+			double waitingTime = currentTime - cbIdleTime[e.machineNum];
 			cbWaitingTime.get(e.machineNum).add(waitingTime);
 			cbWaitingDVD.get(e.machineNum).add(e.dvd);
 		}
@@ -492,32 +492,44 @@ public class DVDfactory {
 /////------------------------------------ Event time calculations --------------------------\\\\\\\\\
 	
 
-	private static int eventTimeM1(){
-		return currentTime + 60;
+	private static double eventTimeM1(){
+		double scale=3.51;
+		double shape=1.23;
+		LogNormalDistribution log = new LogNormalDistribution(scale, shape);
+		
+		return currentTime + log.sample();
 	}
 	
-	private static int eventTimeStartRepairM1() {
-		return currentTime + 8*60*60;
+	private static double eventTimeStartRepairM1() {
+		ExponentialDistribution exp = new ExponentialDistribution(8*60*60);
+		return currentTime + exp.sample();
 	}
 	
-	private static int eventTimeM1FinishedRepair() {
-		return currentTime + 2*60*60;
+	private static double eventTimeM1FinishedRepair() {
+		ExponentialDistribution exp = new ExponentialDistribution(2*60*60);
+		return currentTime + exp.sample();
 	}
 	
-	private static int eventTimeM2() {
-		return currentTime + 24;
+	private static double eventTimeM2() {
+		double scale=3.51;
+		double shape=1.23;
+		LogNormalDistribution log = new LogNormalDistribution(scale, shape);
+		return currentTime + log.sample();
 	}
 	
-	private static int eventTimeM3_12() {
+	private static double eventTimeM3_12() {
 		return currentTime + 16*20;
 	}
 	
-	private static int eventTimeM3_3() {
+	// This is always exactly 3 minutes
+	private static double eventTimeM3_3() {
 		return currentTime + 180;
 	}
 	
-	private static int eventTimeM4() {
-		return currentTime + 24;
+	private static double eventTimeM4() {
+		Random rng = new Random();
+		double m4Time = rng.nextInt(10) + rng.nextDouble() + 20;
+		return currentTime + m4Time;
 	}
 	
 	private static int getCartridgeSize(){
@@ -537,8 +549,10 @@ public class DVDfactory {
 		}
 	}
 	
-	private static int eventTimeM4Refill() {
-		return  15*60;
+	
+	private static double eventTimeM4Refill() {
+		NormalDistribution normalDis = new NormalDistribution(900, 60);
+		return  normalDis.sample();
 	}
 	
 	/////-------------------------------------------- Main method ------------------------------------------\\\\\\\\\
@@ -547,13 +561,10 @@ public class DVDfactory {
 	
 	public static void main(String[] args){
 		init();
-		double scale;
-		double shape;
-		double output;
-		LogNormalDistribution log = new LogNormalDistribution();
-		log.sample();
 		
-		// An eventstep 10 is the "End Simulation" event. If this is the next event, the simulation should stop.
+
+		
+		// An eventstep 11 is the "End Simulation" event. If this is the next event, the simulation should stop.
 		while(eventList.peek().eventStep != 11 ) {
 			Event e = eventList.remove();
 			switch(e.eventStep) {
@@ -584,6 +595,13 @@ public class DVDfactory {
 			default: System.out.println("What's happening?!?!");
 			}
 		}
+		
+		for(int i = 0; i < 500; i++){
+			
+			
+			//System.out.println(randvalue);
+			}
+		
 	}
 
 
