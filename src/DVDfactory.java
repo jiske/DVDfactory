@@ -18,8 +18,8 @@ public class DVDfactory {
 	public static int dvdsM2 = 0;
 	public static int brokenDVDs = 0;
 	public static int hour = 0;
-	public static int m2DVDsFinished = 0;
-	public static int cbFinish = 0;
+	public static int m2Int = 0;
+	public static int cbInt = 0;
 	public static int m3_12Int = 0;
 	public static int m3_3Int = 0;
 	public static int m4Int = 0;
@@ -139,10 +139,10 @@ public class DVDfactory {
 			cartridge[i] = getCartridgeSize();
 			countDVDs[i] = 0;
 		}
-		Event endSimulationEvent = new Event((24*60*60),11,0,null);
+		Event endSimulationEvent = new Event((7*24*60*60),11,0,null);
 		eventList.add(endSimulationEvent);
 		
-		Event newHourCheck = new Event(currentTime+(60*60)+1,10,0,null);
+		Event newHourCheck = new Event(currentTime+(24*60*60)+1,10,0,null);
 		eventList.add(newHourCheck);
 		
 	}
@@ -214,16 +214,15 @@ public class DVDfactory {
 	
 	private static void m2ScheduledFinished(Event e) { 
 		currentTime = e.eventTime;
-		
+
 		// Again, we still need to check this PRNG.
 		double dvdBrokenRand;
 		Random rand = new Random();
 		dvdBrokenRand = rand.nextDouble();
-		
+
 		if (!cbIdle[e.machineNum]){
 			m2Busy[e.machineNum] = false;
 			if (dvdBrokenRand > .02) { // DVDs to conveyor belt
-				m2DVDsFinished++;
 				Event cbScheduledFinished = new Event((currentTime+(5*60)),5,e.machineNum,e.dvd);
 				eventList.add(cbScheduledFinished);
 			} else { // DVD breaks
@@ -258,7 +257,7 @@ public class DVDfactory {
 				eventList.add(m2Finished);
 				m2Busy[e.machineNum] = true;
 			}
-		// If conveyor belt is idle set m2Idle true
+		// If conveyor belt is idle set true
 		} else {
 			m2Idle[e.machineNum] = true;
 			m2WaitingDVD.set(e.machineNum, e.dvd);
@@ -266,7 +265,6 @@ public class DVDfactory {
 	}
 	
 	private static void cbScheduledFinished(Event e) {
-		cbFinish++;
 		currentTime = e.eventTime;
 		if(!cbIdle[e.machineNum]){
 			// If not 20 put DVD in crate
@@ -330,6 +328,10 @@ public class DVDfactory {
 							Event m2ScheduledFinished = new Event(currentTime,4,i,m2WaitingDVD.get(i));
 							eventList.add(m2ScheduledFinished);
 							
+						} else if(!bufferList.get(i).isEmpty()){
+							m2Idle[i] = false;
+							Event m2ScheduledFinished = new Event(eventTimeM2(),4,i,bufferList.get(i).remove());
+							eventList.add(m2ScheduledFinished);
 						}
 						
 						if(!m4Repairing[k]) {
@@ -392,7 +394,6 @@ public class DVDfactory {
 					Event crateScheduledSwap = new Event(currentTime,6,e.machineNum,null);
 					eventList.add(crateScheduledSwap);
 				} else {
-					//System.out.println("KOM IK HIER WEL ALTIJD????");
 					Event m4ScheduledFinished = new Event(eventTimeM4(),9,e.machineNum,null);
 					eventList.add(m4ScheduledFinished);
 				}
@@ -422,8 +423,8 @@ public class DVDfactory {
 			System.out.println("DVDs in buffer " + (i) + ": " + bufferList.get(i).size());
 		}
 		System.out.println("Total number of DVDs broken in machine 2: " + brokenDVDs);	
-		System.out.println("Total number of DVDs finished in machine 2: " + m2DVDsFinished);
-		System.out.println("Total number of DVDs finished cb: " + cbFinish);
+		//System.out.println("Total number of DVDs finished in machine 2: " + m2DVDsFinished);
+		//System.out.println("Total number of DVDs finished cb: " + cbFinish);
 		System.out.println("DVDs on conveyor belt 0: " + cbWaitingDVD.get(0).size());
 		System.out.println("DVDs on conveyor belt 1: " + cbWaitingDVD.get(1).size());
 
@@ -436,6 +437,8 @@ public class DVDfactory {
 		for(int i = 0; i<amountM2; i++) {
 			System.out.println("DVDs in crateBack " + (i) + ": " + crateBackList.get(i).size());
 		}
+		System.out.println("Calls to method m2Finished: " + m2Int);
+		System.out.println("Calls to method cbFinished: " + cbInt);
 		System.out.println("Calls to method cbSwap: " + cSwapInt);
 		System.out.println("Calls to method m3_12: " + m3_12Int);
 		System.out.println("Calls to method m3_3: " + m3_3Int);
@@ -484,7 +487,7 @@ public class DVDfactory {
 		}
 		System.out.println();
 		System.out.println("---");
-		Event newHourCheck = new Event(currentTime+(60*60),10,0,null);
+		Event newHourCheck = new Event(currentTime+(24*60*60),10,0,null);
 		eventList.add(newHourCheck);
 	}
 
@@ -511,14 +514,22 @@ public class DVDfactory {
 	}
 	
 	private static double eventTimeM2() {
-		double scale=3.51;
-		double shape=1.23;
+		double scale=2.91;
+		double shape=0.822;
 		LogNormalDistribution log = new LogNormalDistribution(scale, shape);
 		return currentTime + log.sample();
 	}
 	
 	private static double eventTimeM3_12() {
-		return currentTime + 16*20;
+		ExponentialDistribution exp1 = new ExponentialDistribution(10);
+		ExponentialDistribution exp2 = new ExponentialDistribution(6);
+		double m3_12Time = 0;
+		for(int i = 0; i < crateSize; i++) {
+			m3_12Time += exp1.sample() + exp2.sample();
+		}
+		
+		
+		return currentTime + m3_12Time;
 	}
 	
 	// This is always exactly 3 minutes
@@ -575,8 +586,10 @@ public class DVDfactory {
 			case 3: m1FinishedRepairing(e);
 					break;
 			case 4: m2ScheduledFinished(e);
+					m2Int++;
 					break;
 			case 5: cbScheduledFinished(e);
+					cbInt++;
 					break;
 			case 6: cratesScheduledSwap(e);
 					cSwapInt++;
@@ -595,13 +608,7 @@ public class DVDfactory {
 			default: System.out.println("What's happening?!?!");
 			}
 		}
-		
-		for(int i = 0; i < 500; i++){
-			
-			
-			//System.out.println(randvalue);
-			}
-		
+		System.out.println("Average DVD's produced per hour: " + producedDVDQueue.size()/(24*7));
 	}
 
 
